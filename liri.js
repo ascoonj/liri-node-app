@@ -1,3 +1,4 @@
+// Require all packages
 require("dotenv").config();
 
 var fs = require("fs");
@@ -12,15 +13,18 @@ var inquirer = require("inquirer");
 var spotify = new Spotify(keys.spotify);
 var client = new Twitter(keys.twitter);
 
+//Establish global variables
 var userScreenName = "";
 var userSong = "";
 var userMovie = "";
 
+//Test that the keys are being imported from the keys correctly
 //console.log("Spotify: ", spotify)
 //console.log("Twitter: ", client);
 
-startLiri();
 
+
+//Function to introduce the app, and give the user the opportunity to try it or not. 
 function startLiri() {
     console.log("Welcome to the Liri Command Line Search App. You can look for movies, tweets and songs! ");
 
@@ -31,9 +35,11 @@ function startLiri() {
         default: false
 
     }]).then(function (inqResponse) {
-
+        //After receiving the user response
+        //display the menu if the user responds affirmatively.
         if (inqResponse.start === true) {
             displayMenu();
+            //Otherwise, provide an exit message.
         } else {
             console.log("============================================================");
             console.log("Okay, maybe next time!");
@@ -41,6 +47,10 @@ function startLiri() {
     });
 }
 
+startLiri();
+
+// Function to display the main menu of search options to the user that will be presented
+// repeatedly while the user continues to use the app
 function displayMenu() {
     console.log("============================================================");
     inquirer.prompt([{
@@ -52,10 +62,15 @@ function displayMenu() {
 
         console.log("============================================================");
         var activity = inqResponse.activity;
+        //After the response is returned, call a function to check the answer and perform the
+        //appropriate process
         evaluateSelection(activity);
     });
 };
 
+// Checks with the user after they have received a result from a search whether they want
+// to search for something else.
+// Prevents the app from exiting unnecessarily if the user wishes to perform multiple searches
 function searchMore() {
     inquirer.prompt([{
         type: "confirm",
@@ -64,18 +79,20 @@ function searchMore() {
         default: false
 
     }]).then(function (inqResponse) {
-
+        //After the response is returned, if the user responds affirmatively, re-display the main menu of options
         if (inqResponse.searchAgain === true) {
             displayMenu();
         } else {
+            //Otherwise, display a friendly exit message.
             console.log("============================================================");
             console.log("Thanks for trying Liri! Come back soon.");
         }
     });
 }
 
+// Use a switch case statement to conditioanlly determine what to do based on the user selection
 function evaluateSelection(action) {
-
+    // Log the user's choice from the menu to the screen and to the log.txt file.
     logThis(action);
     switch (action) {
         case "my-tweets":
@@ -97,10 +114,12 @@ function evaluateSelection(action) {
 
 }
 
-
+// If the user selects the "do-what-it-says" option, this function bypasses the steps to get specific search terms
+// and directly runs that function listed in the random.txt file with the search term also contained therein.
 function evaluateFile(action, option) {
-
-    // fs.appendFileSync("./log.txt",action);
+    // Log the file's action and searchterm to the screen and to the log.txt file.
+    logThis(action);
+    logThis(option);
     switch (action) {
         case "my-tweets":
             getTweets(option);
@@ -117,6 +136,7 @@ function evaluateFile(action, option) {
 
 }
 
+// Prompt the user to enter a twitter screen name for use in the Twitter API call
 function getTwitHandle() {
 
     inquirer.prompt([{
@@ -127,47 +147,46 @@ function getTwitHandle() {
     }]).then(function (inqResponse) {
 
         userScreenName = inqResponse.userScreenName;
+        //Pass the user-provided screen-name to the function containing the API call
         getTweets(userScreenName);
     });
 
 }
 
+// Build the TWitter API call, allowing a twitter screen-name to be passed as an argument.
 function getTweets(twitHandle) {
-
+    // Store the API call paramaters in an object
     var params = {
         screen_name: twitHandle,
         count: 5
     };
-
+    // Make the Twitter API call
     client.get('statuses/user_timeline', params, function (err, data) {
         //console.log(data);
         console.log(data.length);
+        // After the response is retutrned, verify that it contains tweets
+        // If it does not, log a message to the screen and to the log file
+        // And re-display the menu to allow the user to search again
         if (data.length === 0 || typeof data.length === "undefined") {
             logThis("No tweets here. Make sure you've spelled the screen-name correctly.")
             displayMenu();
         } else {
+            // Otherwsie, iterate over the tweets to display on screen the text of the tweets, 
+            // and the time at which they were created
+            // Also log the info to the log.txt file
             data.forEach(function (element, i) {
                 logThis("============================================================\n");
                 logThis("Tweet #" + (i + 1) + ": " + element.text);
                 logThis("Created On: " + element.created_at);
             });
             logThis("============================================================");
+            // Call the function offering user the option to search again
             searchMore();
         }
-
-
-        // for (var i = 0; i < data.length; i++) {
-        //     console.log("============================================================\n");
-        //     console.log("Tweet #" + (i + 1) + ": " + data[i].text);
-        //     // console.log("\n");
-        // };
-        // console.log("============================================================");
-        // searchMore();
     });
 };
 
-
-
+// Prompt the user for a song to search for with the Spotify API
 function getSong() {
 
     inquirer.prompt([{
@@ -178,15 +197,16 @@ function getSong() {
     }]).then(function (inqResponse) {
 
         userSong = inqResponse.userSong;
-        console.log("This is the song I want to search for: ", userSong);
+        // Log the user's search song to the screen and to the log.txt file
+        logThis("User searched for: " + userSong);
+        // Pass the user-provided song to the function containing the API call
         getSongInfo(userSong);
     });
 
 };
 
+// Build the Spotify API call within a function, allowing a song to be passed as an argument.
 function getSongInfo(song) {
-
-    console.log("Is this my song: ", song);
 
     spotify.search({
         type: 'track',
@@ -196,43 +216,44 @@ function getSongInfo(song) {
         if (err) {
             return console.log('Error occurred: ' + err);
         } else {
+
             var songResults = data.tracks.items;
             logThis("You searched for: " + song);
             //console.log("==================" + songName + "==================");
+            //Iterate over the array containing the song details
             for (let i = 0; i < songResults.length; i++) {
                 // const element = songResults[i];
                 logThis("========================================================================================================================= \n");
                 // console.log("Artists:")
+                // Create an empty array to hold artists in the event of multiple artists
                 var songArtists = [];
+                //Iterated over the artists array
                 for (let j = 0; j < songResults[i].artists.length; j++) {
+                    //Add each artist to the artist array
                     songArtists.push(songResults[i].artists[j].name);
+                    // Join the array to make the data more readable
                     var listOfArtists = songArtists.join(", ");
                 };
-
+                //Print to the screen, and log to the log.txt file the name, artists, preview URL 
+                // and album name of each song
                 logThis("Song Name: " + songResults[i].name);
                 logThis("Artists: " + listOfArtists);
                 logThis("Preview URL: " + songResults[i].preview_url);
                 logThis("Album Name: " + songResults[i].album.name);
 
             };
-            // console.log(data.tracks.items[0].artists[0].name);
-            // console.log(data.tracks.items[0].name);
-            // console.log(data.tracks.items[0].preview_url);
-            // console.log(data.tracks.items[0].album.name);
-
-
+            //Present the data in readable format to determine how to traverse it
             //console.log(JSON.stringify(data, null, 2));
-            //console.log(data[0].name);
+            
             logThis("=========================================================================================================================");
+            
+            // Call the function offering user the option to search again
             searchMore();
         }
-
     });
-
-
 };
 
-
+// Prompt the user for a movie to search for with the OMDB API
 function getMovie() {
 
     inquirer.prompt([{
@@ -243,7 +264,7 @@ function getMovie() {
     }]).then(function (inqResponse) {
 
         userMovie = inqResponse.userMovie;
-
+        // Pass the user-provided movie to the function containing the http request
         getMovieInfo(userMovie);
 
     });
@@ -251,12 +272,12 @@ function getMovie() {
 
 function getMovieInfo(movie) {
 
-    // Then run a request to the OMDB API with the movie specified
+    // Run a request to the OMDB API with the movie specified
     var queryUrl = "http://www.omdbapi.com/?t=" + movie + "&y=&plot=short&apikey=trilogy";
 
     //console.log(queryUrl);
 
-    // Then create a request to the queryUrl
+    // Create a request to the queryUrl
     request(queryUrl, function (error, response, body) {
         var {
             Title,
@@ -265,11 +286,13 @@ function getMovieInfo(movie) {
         // If the request is successful (i.e. if the response status code is 200)
         if (!error && response.statusCode === 200) {
 
-            // Parse the body of the site and recover just the imdbRating
-            // (Note: The syntax below for parsing isn't obvious. Just spend a few moments dissecting it).
+            // Parse the body of the site and recover just the specified details
+            // Check that valid movie info is returned
             if (typeof JSON.parse(body).Year === "undefined") {
+                // if undefined, display message to user, and re-dislay main menu
                 logThis("No movies by that name. Looks like you might have misspelled it :-(");
                 displayMenu();
+                // Otherwise traverse the response and display the details, and log them to the log.txt file
             } else {
                 logThis("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                 logThis("* Movie Title: " + Title);
@@ -281,7 +304,7 @@ function getMovieInfo(movie) {
                 logThis("* Plot: " + JSON.parse(body).Plot);
                 logThis("* Actors: " + JSON.parse(body).Actors);
                 logThis("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-
+                // Then give the user the option to continue using the app or exit
                 searchMore();
             }
         }
@@ -297,28 +320,27 @@ function doWhatItSays() {
             return console.log(error);
         }
 
-        // We will then print the contents of data
+        // Test the contents of the data
         //console.log(data);
 
         // Then split it by commas (to make it more readable)
         var dataArr = data.split(",");
 
-        // We will then re-display the content as an array for later use.
-        // console.log(dataArr);
-
+        // Once split, the data is now an array with two members
+        // Store each in a variable, to be passed to the function for evaluation
         var fileAction = dataArr[0];
         var searchTerm = dataArr[1];
 
+        // Diplay the values to the screen and log to the log.txt file
         logThis(fileAction + ": " + searchTerm);
-        // console.log(searchTerm);
-
+        
+        // Pass the values to the function
         evaluateFile(fileAction, searchTerm);
 
     });
-
-
 }
 
+// Create a function to facilitate logging data to the screen and to the log file in one step
 function logThis(message) {
     console.log(message);
     fs.appendFileSync("./log.txt", message + "\n", "utf8");
